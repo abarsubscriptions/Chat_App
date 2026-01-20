@@ -358,7 +358,10 @@
     <!-- logic to swap form to register -->
 
     <script>
-        const API_URL = "http://localhost:8000";
+        // For single-port deployment, use relative path (empty string implies current origin)
+        // If testing locally with separate backend, use full URL.
+        const API_URL = "";
+        // const API_URL = "http://localhost:8000"; // For local dev with separate backend
         let TOKEN = localStorage.getItem("access_token");
         let CURRENT_USER_ID = null;
         let SELECTED_RECIPIENT_ID = null;
@@ -485,7 +488,19 @@
 
         function connectWebSocket() {
             if (WS) return;
-            WS = new WebSocket(`ws://localhost:8000/ws?token=${TOKEN}`);
+            // Dynamic WS URL based on current location
+            const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+            const host = window.location.host;
+            // Handle if API_URL is empty (same origin) or absolute
+            let wsUrl = "";
+            if (API_URL === "") {
+                wsUrl = `${protocol}//${host}`;
+            } else {
+                const wsProtocol = API_URL.startsWith("https") ? "wss" : "ws";
+                wsUrl = API_URL.replace(/^http(s)?/, wsProtocol);
+            }
+
+            WS = new WebSocket(`${wsUrl}/ws?token=${TOKEN}`);
 
             WS.onopen = () => console.log("Connected to WS");
 
@@ -545,6 +560,7 @@
                 setTimeout(connectWebSocket, 3000);
             }
         }
+
 
         function updateUserListStatus() {
             ONLINE_USERS.forEach(uid => updateUserStatus(uid, true));
