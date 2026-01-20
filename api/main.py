@@ -318,4 +318,13 @@ async def get_group_messages(
         "is_group": True,
         "recipient_id": group_id
     }).sort("timestamp", pymongo.ASCENDING).to_list(length=100)
+
+    # Store sender names for client convenience?
+    # For now, client resolves names from /users list
     return messages
+
+if __name__ == "__main__":
+    import uvicorn
+    import os
+    port = int(os.environ.get("PORT", 8003))
+    uvicorn.run("api.main:app", host="0.0.0.0", port=port, reload=True)
