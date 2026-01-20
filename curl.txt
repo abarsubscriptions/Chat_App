@@ -1,0 +1,23 @@
+# 1. Register a new user
+curl -X POST "http://localhost:8000/register" \
+     -H "Content-Type: application/json" \
+     -d '{
+           "name": "Test User",
+           "email": "test@example.com",
+           "password": "securepassword123"
+         }'
+
+# 2. Login to get Access Token
+# Note: You will need to copy the "access_token" from the response for the next steps.
+curl -X POST "http://localhost:8000/token" \
+     -H "Content-Type: application/x-www-form-urlencoded" \
+     -d "username=test@example.com&password=securepassword123"
+
+# 3. Get Current Authenticated User
+# Replace <ACCESS_TOKEN> with the token received from login
+curl -X GET "http://localhost:8000/users/me" \
+     -H "Authorization: Bearer <ACCESS_TOKEN>"
+
+# 4. Get User by ID
+# Replace <USER_ID> with the "_id" returned during registration
+curl -X GET "http://localhost:8000/users/<USER_ID>"

@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+
+        .glass-panel {
+            @apply bg-white bg-opacity-90 backdrop-blur-lg border border-white/20 shadow-xl;
+        }
+
+        .message-bubble {
+            @apply max-w-[70%] p-3 rounded-2xl shadow-sm text-sm;
+        }
+
+        .message-me {
+            @apply bg-blue-500 text-white rounded-br-none ml-auto;
+        }
+
+        .message-other {
+            @apply bg-gray-100 text-gray-800 rounded-bl-none;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 h-screen font-sans antialiased text-gray-900">
+
+    <!-- LOADING SCREEN -->
+    <div id="loadingScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-50">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    </div>
+
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="hidden h-full flex items-center justify-center p-4">
+        <!-- Left Panel: Auth Forms -->
+        <div
+            class="w-full md:w-[480px] bg-white p-8 md:p-12 flex flex-col justify-center relative z-10 transition-all duration-500 ease-in-out">
+            <div class="mb-10">
+                <h1
+                    class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+                    Welcome Back</h1>
+                <p class="text-gray-500" id="authSubtext">Enter your details to access your account.</p>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <input type="email" id="email" required
+                        class="w-full px-5 py-3 rounded-xl bg-gray-50 border border-gray-100 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                        placeholder="you@example.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <input type="password" id="password" required
+                        class="w-full px-5 py-3 rounded-xl bg-gray-50 border border-gray-100 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                        placeholder="••••••••">
+                </div>
+                <button type="submit"
+                    class="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold hover:shadow-lg hover:shadow-blue-500/30 transition-all transform hover:-translate-y-0.5">
+                    Sign In
+                </button>
+                <div class="text-center text-sm text-gray-500">
+                    Don't have an account? <a href="#" onclick="toggleAuth('register')"
+                        class="text-blue-600 font-semibold hover:underline">Sign Up</a>
+                </div>
+            </form>
+
+            <!-- REGISTER FORM (Hidden by default) -->
+            <form id="registerForm" class="space-y-6 hidden">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                    <input type="text" id="regName" required
+                        class="w-full px-5 py-3 rounded-xl bg-gray-50 border border-gray-100 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                        placeholder="John Doe">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <input type="email" id="regEmail" required
+                        class="w-full px-5 py-3 rounded-xl bg-gray-50 border border-gray-100 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                        placeholder="you@example.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <input type="password" id="regPassword" required
+                        class="w-full px-5 py-3 rounded-xl bg-gray-50 border border-gray-100 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                        placeholder="••••••••">
+                </div>
+                <button type="submit"
+                    class="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold hover:shadow-lg hover:shadow-blue-500/30 transition-all transform hover:-translate-y-0.5">
+                    Create Account
+                </button>
+                <div class="text-center text-sm text-gray-500">
+                    Already have an account? <a href="#" onclick="toggleAuth('login')"
+                        class="text-blue-600 font-semibold hover:underline">Sign In</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CHAT DASHBOARD -->
+    <div id="chatScreen" class="hidden h-full flex">
+        <!-- SIDEBAR -->
+        <div class="w-80 bg-white border-r border-gray-100 flex flex-col">
+            <!-- User Profile Header -->
+            <div class="p-4 border-b border-gray-50 bg-gray-50/50">
+                <div class="flex items-center space-x-3">
+                    <div id="currentUserAvatar"
+                        class="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/20">
+                    </div>
+                    <div>
+                        <h3 id="currentUserName" class="font-bold text-gray-800 text-sm"></h3>
+                        <p class="text-xs text-green-500 font-medium flex items-center">
+                            <span class="w-2 h-2 rounded-full bg-green-500 mr-1"></span>
+                            Online
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 border-b border-gray-50">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-bold text-xl">Chats</h2>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="openGroupModal()" class="text-gray-400 hover:text-blue-500 transition-colors"
+                            title="Create Group">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                        </button>
+                        <button onclick="openSettings()" class="text-gray-400 hover:text-gray-600 transition-colors"
+                            title="Settings">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
+                                </path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                        </button>
+                        <button id="logoutBtn" class="text-gray-400 hover:text-red-500 transition-colors"
+                            title="Logout">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
+                                </path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="relative">
+                    <input type="text" placeholder="Search..."
+                        class="w-full pl-10 pr-4 py-2 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-blue-100 outline-none text-sm text-gray-600 placeholder-gray-400">
+                    <svg class="w-4 h-4 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <div id="usersList" class="flex-1 overflow-y-auto p-3 space-y-1">
+                <!-- Users will be injected here -->
+            </div>
+        </div>
+
+        <!-- MAIN CHAT AREA -->
+        <div class="flex-1 flex flex-col bg-slate-50 relative">
+            <!-- Empty State -->
+            <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
+                <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z">
+                        </path>
+                    </svg>
+                </div>
+                <p>Select a chat to start messaging</p>
+            </div>
+
+            <!-- Chat Header -->
+            <div id="chatHeader"
+                class="hidden h-16 bg-white border-b border-gray-100 flex items-center px-6 justify-between">
+                <div class="flex items-center space-x-4">
+                    <div id="chatAvatar"
+                        class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                    </div>
+                    <div>
+                        <h3 id="chatName" class="font-bold text-gray-900"></h3>
+                        <p id="chatStatus" class="text-xs text-gray-500"></p>
+                    </div>
+                </div>
+                <button id="groupInfoBtn" onclick="openGroupDetails()"
+                    class="hidden p-2 text-gray-400 hover:text-blue-600 transition-colors rounded-lg hover:bg-gray-50">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Messages List -->
+            <div id="messagesArea" class="hidden flex-1 overflow-y-auto p-6 space-y-4">
+                <!-- Messages injected here -->
+            </div>
+
+            <!-- Input Area -->
+            <div id="inputArea" class="hidden p-4 bg-white border-t border-gray-100">
+                <form id="messageForm" class="flex items-center space-x-3">
+                    <input type="text" id="messageInput"
+                        class="flex-1 px-4 py-3 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-blue-100 outline-none text-gray-700 placeholder-gray-400"
+                        placeholder="Type your message..." autocomplete="off">
+                    <button type="submit"
+                        class="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- CREATE GROUP MODAL -->
+    <div id="createGroupModal"
+        class="hidden absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="glass-panel w-full max-w-md p-6 rounded-2xl">
+            <h2 class="text-xl font-bold mb-4">Create Group Chat</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Group Name</label>
+                    <input type="text" id="groupName"
+                        class="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="e.g. Project Team">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Select Members</label>
+                    <div id="modalUserList"
+                        class="h-40 overflow-y-auto border border-gray-200 rounded-xl p-2 space-y-1">
+                        <!-- Checkboxes injected here -->
+                    </div>
+                </div>
+                <div class="flex space-x-3 pt-2">
+                    <button onclick="closeGroupModal()"
+                        class="flex-1 py-2 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200">Cancel</button>
+                    <button onclick="createGroup()"
+                        class="flex-1 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/30">Create</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GROUP DETAILS MODAL -->
+    <div id="groupDetailsModal"
+        class="hidden absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="glass-panel w-full max-w-md p-6 rounded-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold">Group Details</h2>
+                <button onclick="closeGroupDetails()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="space-y-6">
+                <!-- Members List -->
+                <div>
+                    <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Members</h3>
+                    <div id="groupMembersList"
+                        class="max-h-40 overflow-y-auto space-y-2 border border-gray-100 rounded-xl p-2">
+                        <!-- Members injected here -->
+                    </div>
+                </div>
+
+                <!-- Add Member -->
+                <div>
+                    <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Add Member</h3>
+                    <div class="flex space-x-2">
+                        <select id="addMemberSelect"
+                            class="flex-1 px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Select user...</option>
+                        </select>
+                        <button onclick="addGroupMember()"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors">Add</button>
+                    </div>
+                </div>
+
+                <!-- Delete Group -->
+                <div id="deleteGroupSection" class="hidden pt-4 border-t border-gray-100">
+                    <button onclick="deleteGroup()"
+                        class="w-full py-3 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 font-medium transition-colors">
+                        Delete Group
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settingsModal"
+        class="hidden absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="glass-panel w-full max-w-sm p-6 rounded-2xl">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold text-gray-800">Settings</h2>
+                <button onclick="closeSettings()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="space-y-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="font-medium text-gray-800">Notification Sounds</p>
+                        <p class="text-xs text-gray-500">Play a sound for new messages</p>
+                        <button onclick="playNotificationSound()"
+                            class="text-xs text-blue-500 hover:text-blue-700 font-medium underline mt-1">Test
+                            Sound</button>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="soundToggle" class="sr-only peer"
+                            onchange="toggleSound(this.checked)">
+                        <div
+                            class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 transition-colors">
+                        </div>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="font-medium text-gray-800">Push Notifications</p>
+                        <p class="text-xs text-gray-500">Show desktop notifications</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="pushToggle" class="sr-only peer" onchange="togglePush(this.checked)">
+                        <div
+                            class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 transition-colors">
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- REGISTER MODAL (Simple implementation for now) -->
+    <!-- logic to swap form to register -->
+
+    <script>
+        const API_URL = "http://localhost:8000";
+        let TOKEN = localStorage.getItem("access_token");
+        let CURRENT_USER_ID = null;
+        let SELECTED_RECIPIENT_ID = null;
+        let SELECTED_IS_GROUP = false;
+        let WS = null;
+        let USER_MAP = {}; // id -> name
+
+        // --- Auth Logic ---
+
+        function toggleAuth(mode) {
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const subtext = document.getElementById('authSubtext');
+            const title = document.querySelector('#loginScreen h1'); // Target the header specifically
+
+            if (mode === 'register') {
+                loginForm.classList.add('hidden');
+                registerForm.classList.remove('hidden');
+                title.innerText = "Create Account";
+                subtext.innerText = "Join the community today.";
+            } else {
+                registerForm.classList.add('hidden');
+                loginForm.classList.remove('hidden');
+                title.innerText = "Welcome Back";
+                subtext.innerText = "Enter your details to access your account.";
+            }
+        }
+
+        async function checkAuth() {
+            const loading = document.getElementById("loadingScreen");
+
+            if (TOKEN) {
+                try {
+                    const res = await fetch(`${API_URL}/users/me`, {
+                        headers: { "Authorization": `Bearer ${TOKEN}` }
+                    });
+                    if (res.ok) {
+                        const user = await res.json();
+                        CURRENT_USER_ID = user._id;
+
+                        // Update Profile Header
+                        document.getElementById("currentUserName").innerText = user.name;
+                        document.getElementById("currentUserAvatar").innerText = user.name[0];
+
+                        showChatScreen();
+                        connectWebSocket();
+                        fetchUsers(); // Loads both groups and users
+
+                        // Hide Loading
+                        loading.classList.add("hidden");
+                        return;
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+            // Show Login
+            loading.classList.add("hidden");
+            showLoginScreen();
+        }
+
+        document.getElementById("loginForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+
+            const formData = new URLSearchParams();
+            formData.append('username', email);
+            formData.append('password', password);
+
+            try {
+                const res = await fetch(`${API_URL}/token`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: formData
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    TOKEN = data.access_token;
+                    localStorage.setItem("access_token", TOKEN);
+                    checkAuth();
+                } else {
+                    alert("Login failed");
+                }
+            } catch (e) {
+                alert("Error connecting to server");
+            }
+        });
+
+        document.getElementById("registerForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const name = document.getElementById("regName").value;
+            const email = document.getElementById("regEmail").value;
+            const password = document.getElementById("regPassword").value;
+
+            try {
+                const res = await fetch(`${API_URL}/register`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name, email, password })
+                });
+
+                if (res.ok) {
+                    alert("Registration successful! Please login.");
+                    toggleAuth('login');
+                } else {
+                    const data = await res.json();
+                    alert(data.detail || "Registration failed");
+                }
+            } catch (e) {
+                alert("Error connecting to server");
+            }
+        });
+
+        document.getElementById("logoutBtn").addEventListener("click", () => {
+            localStorage.removeItem("access_token");
+            location.reload();
+        });
+
+        // --- WebSocket ---
+
+        let ONLINE_USERS = new Set();
+
+        function connectWebSocket() {
+            if (WS) return;
+            WS = new WebSocket(`ws://localhost:8000/ws?token=${TOKEN}`);
+
+            WS.onopen = () => console.log("Connected to WS");
+
+            WS.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                if (data.type === "online_users") {
+                    data.users.forEach(uid => ONLINE_USERS.add(uid));
+                    updateUserListStatus();
+                } else if (data.type === "status") {
+                    if (data.status === "online") ONLINE_USERS.add(data.user_id);
+                    else ONLINE_USERS.delete(data.user_id);
+
+                    if (data.last_seen && USER_DETAILS[data.user_id]) {
+                        USER_DETAILS[data.user_id].last_seen = data.last_seen;
+                    }
+
+                    updateUserStatus(data.user_id, data.status === "online");
+                    updateHeaderStatus(); // Update if current chat
+                } else if (data.type === "typing") {
+                    handleTypingEvent(data);
+                } else if (data.type === "message" || !data.type) {
+                    // Handle message
+                    let isCurrentChat = false;
+                    let listId = null;
+
+                    if (data.is_group) {
+                        listId = data.group_id;
+                        if (SELECTED_IS_GROUP && data.group_id === SELECTED_RECIPIENT_ID) isCurrentChat = true;
+                    } else {
+                        // DM: If I am sender, update recipient's item. If I am recipient, update sender's item.
+                        if (data.sender_id === CURRENT_USER_ID) listId = data.recipient_id;
+                        else listId = data.sender_id;
+
+                        if (!SELECTED_IS_GROUP && (data.sender_id === SELECTED_RECIPIENT_ID || (data.sender_id === CURRENT_USER_ID && data.recipient_id === SELECTED_RECIPIENT_ID))) {
+                            isCurrentChat = true;
+                        }
+                    }
+
+                    if (isCurrentChat) {
+                        appendMessage(data.content, data.sender_id === CURRENT_USER_ID, data.sender_id);
+                        if (data.sender_id) clearTypingIndicator(data.sender_id);
+
+                        // Mark read implicitly since open? Or explicit call?
+                        // For now, no badge increment, but update preview
+                        if (listId) updateSidebarPreview(listId, data.content, false, data.sender_id);
+                    } else {
+                        // Background update
+                        if (listId) updateSidebarPreview(listId, data.content, true, data.sender_id);
+                    }
+                }
+            };
+
+            WS.onclose = () => {
+                console.log("WS Disconnected");
+                WS = null;
+                setTimeout(connectWebSocket, 3000);
+            }
+        }
+
+        function updateUserListStatus() {
+            ONLINE_USERS.forEach(uid => updateUserStatus(uid, true));
+        }
+
+        function updateUserStatus(userId, isOnline) {
+            const el = document.getElementById(`status-dot-${userId}`);
+            if (el) {
+                if (isOnline) {
+                    el.classList.remove("bg-gray-300");
+                    el.classList.add("bg-green-500", "ring-2", "ring-white");
+                } else {
+                    el.classList.remove("bg-green-500", "ring-2", "ring-white");
+                    el.classList.add("bg-gray-300");
+                }
+            }
+        }
+
+        function updateHeaderStatus() {
+            if (!SELECTED_RECIPIENT_ID) return;
+            const statusEl = document.getElementById("chatStatus");
+            statusEl.classList.remove("text-blue-500", "font-bold");
+
+            if (SELECTED_IS_GROUP) {
+                // Fetch latest group details? Or just show member count
+                // For now, static text or empty
+                statusEl.innerText = "";
+                return;
+            }
+
+            console.log("updateHeaderStatus called", { SELECTED_RECIPIENT_ID, SELECTED_IS_GROUP, ONLINE: ONLINE_USERS.has(SELECTED_RECIPIENT_ID), USER: USER_DETAILS[SELECTED_RECIPIENT_ID] });
+
+            if (ONLINE_USERS.has(SELECTED_RECIPIENT_ID)) {
+                console.log("User is online");
+                statusEl.innerText = "Online";
+                statusEl.className = "text-green-500 text-sm font-medium";
+            } else {
+                // Show Last Seen
+                const user = USER_DETAILS[SELECTED_RECIPIENT_ID];
+                if (user && user.last_seen) {
+                    let ts = user.last_seen;
+                    if (!ts.endsWith("Z")) ts += "Z"; // Assume UTC
+
+                    const date = new Date(ts);
+                    console.log("Parsed Date:", date);
+
+                    if (isNaN(date.getTime())) {
+                        statusEl.innerText = "Offline";
+                    } else {
+                        statusEl.innerText = `Last seen: ${date.toLocaleString()}`;
+                    }
+                    statusEl.className = "text-gray-400 text-sm";
+                } else {
+                    statusEl.innerText = "Offline";
+                    statusEl.className = "text-gray-400 text-sm";
+                }
+            }
+        }
+
+        // --- Typing Logic ---
+        let TYPING_TIMEOUTS = {};
+
+        function handleTypingEvent(data) {
+            let isRelevant = false;
+            if (SELECTED_IS_GROUP && data.is_group && data.group_id === SELECTED_RECIPIENT_ID) {
+                isRelevant = true;
+            } else if (!SELECTED_IS_GROUP && !data.is_group && data.sender_id === SELECTED_RECIPIENT_ID) {
+                isRelevant = true;
+            }
+
+            if (isRelevant) {
+                showTypingIndicator(data.sender_id);
+            }
+        }
+
+        function showTypingIndicator(senderId) {
+            const statusEl = document.getElementById("chatStatus");
+            const name = USER_MAP[senderId] || "Someone";
+
+            if (SELECTED_IS_GROUP) {
+                statusEl.innerText = `${name} is typing...`;
+                statusEl.classList.add("text-blue-500", "font-bold");
+            } else {
+                statusEl.innerText = "Typing...";
+                statusEl.classList.add("text-blue-500", "font-bold");
+            }
+
+            if (TYPING_TIMEOUTS[senderId]) clearTimeout(TYPING_TIMEOUTS[senderId]);
+            TYPING_TIMEOUTS[senderId] = setTimeout(() => {
+                clearTypingIndicator(senderId);
+            }, 3000);
+        }
+
+        function clearTypingIndicator(senderId) {
+            if (TYPING_TIMEOUTS[senderId]) delete TYPING_TIMEOUTS[senderId];
+            updateHeaderStatus();
+        }
+
+        // --- Group Logic ---
+
+        // --- Group Logic ---
+        let CURRENT_GROUP = null; // Store current group object
+
+        function openGroupModal() {
+            document.getElementById("createGroupModal").classList.remove("hidden");
+            fetchUsersForModal();
+        }
+
+        function closeGroupModal() {
+            document.getElementById("createGroupModal").classList.add("hidden");
+            document.getElementById("groupName").value = "";
+        }
+
+        // Group Details Logic
+        function openGroupDetails() {
+            if (!CURRENT_GROUP) return;
+            const modal = document.getElementById("groupDetailsModal");
+            const membersList = document.getElementById("groupMembersList");
+            const addSelect = document.getElementById("addMemberSelect");
+            const deleteSection = document.getElementById("deleteGroupSection");
+
+            modal.classList.remove("hidden");
+
+            // 1. Populate Members
+            membersList.innerHTML = "";
+            CURRENT_GROUP.members.forEach(memberId => {
+                const name = USER_MAP[memberId] || "Unknown User";
+                const div = document.createElement("div");
+                div.className = "flex items-center justify-between text-sm p-2 bg-gray-50 rounded-lg";
+                div.innerHTML = `
+                    <span class="font-medium text-gray-700">${name}</span>
+                    ${memberId === CURRENT_GROUP.created_by ? '<span class="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">Owner</span>' : ''}
+                `;
+                membersList.appendChild(div);
+            });
+
+            // 2. Populate Add Member Select (Users NOT in group)
+            addSelect.innerHTML = '<option value="">Select user...</option>';
+            // Need the full list of users, using USER_DETAILS keys
+            Object.values(USER_DETAILS).forEach(user => {
+                if (!CURRENT_GROUP.members.includes(user._id)) {
+                    const option = document.createElement("option");
+                    option.value = user._id;
+                    option.innerText = user.name;
+                    addSelect.appendChild(option);
+                }
+            });
+
+            // 3. Delete Button Visibility
+            if (CURRENT_GROUP.created_by === CURRENT_USER_ID) {
+                deleteSection.classList.remove("hidden");
+            } else {
+                deleteSection.classList.add("hidden");
+            }
+        }
+
+        function closeGroupDetails() {
+            document.getElementById("groupDetailsModal").classList.add("hidden");
+        }
+
+        async function addGroupMember() {
+            const select = document.getElementById("addMemberSelect");
+            const userId = select.value;
+            if (!userId) return;
+
+            try {
+                const res = await fetch(`${API_URL}/groups/${CURRENT_GROUP._id}/members`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${TOKEN}`
+                    },
+                    body: JSON.stringify({ members: [userId] })
+                });
+
+                if (res.ok) {
+                    const updatedGroup = await res.json();
+                    CURRENT_GROUP = updatedGroup;
+                    openGroupDetails(); // Refresh modal
+                    fetchUsers(); // Refresh sidebar (member counts etc)
+                } else {
+                    alert("Failed to add member");
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function deleteGroup() {
+            if (!confirm("Are you sure you want to delete this group? This cannot be undone.")) return;
+
+            try {
+                const res = await fetch(`${API_URL}/groups/${CURRENT_GROUP._id}`, {
+                    method: "DELETE",
+                    headers: { "Authorization": `Bearer ${TOKEN}` }
+                });
+
+                if (res.ok) {
+                    closeGroupDetails();
+                    // Clear chat area
+                    document.getElementById("emptyState").classList.remove("hidden");
+                    document.getElementById("chatHeader").classList.add("hidden");
+                    document.getElementById("messagesArea").classList.add("hidden");
+                    document.getElementById("inputArea").classList.add("hidden");
+                    SELECTED_RECIPIENT_ID = null;
+                    CURRENT_GROUP = null;
+
+                    fetchUsers(); // Refresh sidebar
+                } else {
+                    alert("Failed to delete group");
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function fetchUsersForModal() {
+            const res = await fetch(`${API_URL}/users`, {
+                headers: { "Authorization": `Bearer ${TOKEN}` }
+            });
+            const users = await res.json();
+            const list = document.getElementById("modalUserList");
+            list.innerHTML = "";
+
+            users.forEach(user => {
+                if (user._id === CURRENT_USER_ID) return;
+                const div = document.createElement("div");
+                div.className = "flex items-center space-x-2 p-2 hover:bg-gray-50 rounded-lg";
+                div.innerHTML = `
+                    <input type="checkbox" value="${user._id}" class="w-4 h-4 text-blue-600 rounded">
+                    <span class="text-sm text-gray-700">${user.name}</span>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        async function createGroup() {
+            const name = document.getElementById("groupName").value;
+            if (!name) return alert("Enter group name");
+
+            const checkboxes = document.querySelectorAll("#modalUserList input:checked");
+            const members = Array.from(checkboxes).map(cb => cb.value);
+            members.push(CURRENT_USER_ID);
+
+            try {
+                const res = await fetch(`${API_URL}/groups`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${TOKEN}`
+                    },
+                    body: JSON.stringify({ name, members, created_by: CURRENT_USER_ID })
+                });
+
+                if (res.ok) {
+                    closeGroupModal();
+                    fetchUsers(); // Refresh sidebar
+                } else {
+                    alert("Failed to create group");
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // --- UI Logic ---
+
+        function showLoginScreen() {
+            document.getElementById("loginScreen").classList.remove("hidden");
+            document.getElementById("chatScreen").classList.add("hidden");
+        }
+
+        function showChatScreen() {
+            document.getElementById("loginScreen").classList.add("hidden");
+            document.getElementById("chatScreen").classList.remove("hidden");
+        }
+
+        async function fetchUsers() {
+            // 1. Fetch Groups
+            const groupsRes = await fetch(`${API_URL}/groups`, {
+                headers: { "Authorization": `Bearer ${TOKEN}` }
+            });
+            const groups = await groupsRes.json();
+
+            // 2. Fetch Users
+            const usersRes = await fetch(`${API_URL}/users`, {
+                headers: { "Authorization": `Bearer ${TOKEN}` }
+            });
+            const users = await usersRes.json();
+
+            // Populate Maps
+            USER_MAP = {};
+            USER_DETAILS = {};
+            users.forEach(u => {
+                USER_MAP[u._id] = u.name;
+                USER_DETAILS[u._id] = u;
+            });
+            groups.forEach(g => {
+                USER_MAP[g._id] = g.name;
+            });
+            // Also need self if not in list (usually is)
+
+            const list = document.getElementById("usersList");
+            list.innerHTML = "";
+
+            // Render Groups
+            if (groups.length > 0) {
+                const header = document.createElement("div");
+                header.className = "px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider";
+                header.innerText = "Groups";
+                list.appendChild(header);
+
+                groups.forEach(group => {
+                    const el = document.createElement("div");
+                    el.id = `chat-item-${group._id}`;
+                    const isSelected = SELECTED_RECIPIENT_ID === group._id;
+                    el.className = `p-3 rounded-xl cursor-pointer flex items-center space-x-3 transition-colors ${isSelected ? 'bg-blue-50 ring-1 ring-blue-100' : 'hover:bg-gray-50'}`;
+
+                    const unreadBadge = group.unread_count > 0 ? `<div id="badge-${group._id}" class="bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${group.unread_count}</div>` : `<div id="badge-${group._id}" class="hidden bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">0</div>`;
+
+                    const lastMsg = group.last_message ? `<p id="last-msg-${group._id}" class="text-xs text-gray-400 truncate">${group.last_message}</p>` : `<p id="last-msg-${group._id}" class="text-xs text-gray-400 truncate">No messages yet</p>`;
+
+                    el.innerHTML = `
+                        <div class="relative">
+                            <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center font-bold text-purple-600">#</div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-center">
+                                <h4 class="font-medium text-gray-800 truncate">${group.name}</h4>
+                                ${unreadBadge}
+                            </div>
+                            ${lastMsg}
+                        </div>
+                    `;
+                    el.onclick = () => selectChat(group, true);
+                    list.appendChild(el);
+                });
+            }
+
+            // Render Users
+            const userHeader = document.createElement("div");
+            userHeader.className = "px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider mt-2";
+            userHeader.innerText = "Direct Messages";
+            list.appendChild(userHeader);
+
+            users.forEach(user => {
+                if (user._id === CURRENT_USER_ID) return;
+
+                const isOnline = ONLINE_USERS.has(user._id);
+                const statusColor = isOnline ? "bg-green-500 ring-2 ring-white" : "bg-gray-300";
+
+                const el = document.createElement("div");
+                el.id = `chat-item-${user._id}`;
+                const isSelected = SELECTED_RECIPIENT_ID === user._id;
+                el.className = `p-3 rounded-xl cursor-pointer flex items-center space-x-3 transition-colors ${isSelected ? 'bg-blue-50 ring-1 ring-blue-100' : 'hover:bg-gray-50'}`;
+
+                const unreadBadge = user.unread_count > 0 ? `<div id="badge-${user._id}" class="bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${user.unread_count}</div>` : `<div id="badge-${user._id}" class="hidden bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">0</div>`;
+
+                const lastMsg = user.last_message ? `<p id="last-msg-${user._id}" class="text-xs text-gray-400 truncate">${user.last_message}</p>` : `<p id="last-msg-${user._id}" class="text-xs text-gray-400 truncate">Tap to chat</p>`;
+
+                el.innerHTML = `
+                    <div class="relative">
+                        <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-bold text-gray-500">${user.name[0]}</div>
+                        <div id="status-dot-${user._id}" class="absolute bottom-0 right-0 w-3 h-3 rounded-full ${statusColor}"></div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-medium text-gray-800 truncate">${user.name}</h4>
+                            ${unreadBadge}
+                        </div>
+                        ${lastMsg}
+                    </div>
+                `;
+                el.onclick = () => selectChat(user, false);
+                list.appendChild(el);
+            });
+        }
+
+        async function selectChat(entity, isGroup) {
+            const prevId = SELECTED_RECIPIENT_ID;
+            SELECTED_RECIPIENT_ID = entity._id;
+            SELECTED_IS_GROUP = isGroup;
+
+            // 1. Update Sidebar UI (Highlighting & Badges)
+            if (prevId) {
+                const prevEl = document.getElementById(`chat-item-${prevId}`);
+                if (prevEl) {
+                    prevEl.classList.remove('bg-blue-50', 'ring-1', 'ring-blue-100');
+                    prevEl.classList.add('hover:bg-gray-50');
+                }
+            }
+            const currEl = document.getElementById(`chat-item-${SELECTED_RECIPIENT_ID}`);
+            if (currEl) {
+                currEl.classList.remove('hover:bg-gray-50');
+                currEl.classList.add('bg-blue-50', 'ring-1', 'ring-blue-100');
+
+                // Hide Badge
+                const badge = document.getElementById(`badge-${SELECTED_RECIPIENT_ID}`);
+                if (badge) {
+                    badge.classList.add("hidden");
+                    badge.innerText = "0";
+                }
+            }
+
+            // 2. Mark as Read (API)
+            try {
+                // Fire and forget
+                fetch(`${API_URL}/conversations/read/${SELECTED_RECIPIENT_ID}`, {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${TOKEN}` }
+                });
+            } catch (e) { console.error(e); }
+
+
+            // UI Updates
+            document.getElementById("emptyState").classList.add("hidden");
+            document.getElementById("chatHeader").classList.remove("hidden");
+            document.getElementById("messagesArea").classList.remove("hidden");
+            document.getElementById("inputArea").classList.remove("hidden");
+
+            const name = entity.name;
+            document.getElementById("chatName").innerText = name;
+
+            const avatar = document.getElementById("chatAvatar");
+            if (isGroup) {
+                CURRENT_GROUP = entity;
+                document.getElementById("groupInfoBtn").classList.remove("hidden");
+                avatar.innerText = "#";
+                avatar.className = "w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold";
+            } else {
+                CURRENT_GROUP = null;
+                document.getElementById("groupInfoBtn").classList.add("hidden");
+                avatar.innerText = name[0];
+                avatar.className = "w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold";
+            }
+
+            // Load History
+            const endpoint = isGroup ? `/messages/group/${entity._id}` : `/messages/${entity._id}`;
+            const res = await fetch(`${API_URL}${endpoint}`, {
+                headers: { "Authorization": `Bearer ${TOKEN}` }
+            });
+            const messages = await res.json();
+
+            // Render Messages
+            const messagesArea = document.getElementById("messagesArea");
+            messagesArea.innerHTML = "";
+            messages.forEach(msg => {
+                appendMessage(msg.content, msg.sender_id === CURRENT_USER_ID, msg.sender_id);
+            });
+            scrollToBottom();
+            updateHeaderStatus();
+        }
+
+
+
+        // --- WebSocket Message Handler Update ---
+        // (This needs to be inside connectWebSocket, strictly replacing the existing onmessage)
+
+        // --- Settings & Notifications ---
+
+        let SETTINGS = {
+            sound: false,
+            push: false
+        };
+
+        // Load Settings
+        const savedSettings = localStorage.getItem("chat_settings");
+        if (savedSettings) {
+            SETTINGS = JSON.parse(savedSettings);
+        }
+
+        function openSettings() {
+            document.getElementById("settingsModal").classList.remove("hidden");
+            document.getElementById("soundToggle").checked = SETTINGS.sound;
+            document.getElementById("pushToggle").checked = SETTINGS.push;
+        }
+
+        function closeSettings() {
+            document.getElementById("settingsModal").classList.add("hidden");
+        }
+
+        function toggleSound(checked) {
+            SETTINGS.sound = checked;
+            saveSettings();
+            if (checked) playNotificationSound(); // Demo
+        }
+
+        function togglePush(checked) {
+            SETTINGS.push = checked;
+            saveSettings();
+            if (checked) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        new Notification("Notifications Enabled", { body: "You will receive messages here." });
+                    }
+                });
+            }
+        }
+
+        function saveSettings() {
+            localStorage.setItem("chat_settings", JSON.stringify(SETTINGS));
+        }
+
+        // --- Audio Context for Sound ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Unlock AudioContext on first user interaction
+        document.addEventListener('click', () => {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+                console.log("AudioContext resumed by user interaction");
+            }
+        }, { once: true });
+
+        function playNotificationSound() {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume(); // Try again just in case
+            }
+            console.log("Playing notification sound...");
+
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(500, audioCtx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(1000, audioCtx.currentTime + 0.2); // Longer
+
+            gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime); // Louder
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.2);
+        }
+
+        // --- Updated updateSidebarPreview to trigger notifications ---
+
+        function updateSidebarPreview(id, content, incrementBadge, senderId) {
+            const lastMsgEl = document.getElementById(`last-msg-${id}`);
+            if (lastMsgEl) lastMsgEl.innerText = content;
+
+            if (incrementBadge) {
+                const badge = document.getElementById(`badge-${id}`);
+                if (badge) {
+                    let count = parseInt(badge.innerText) || 0;
+                    count++;
+                    badge.innerText = count;
+                    badge.classList.remove("hidden");
+                }
+
+                // Trigger Notifications logic here since incrementBadge implies background update
+                console.log("Background update for conversation:", id, "Sender:", senderId);
+
+                if (SETTINGS.sound) {
+                    playNotificationSound();
+                }
+
+                if (SETTINGS.push) {
+                    if (document.hidden || true) { // Force true for demo
+                        if (Notification.permission === "granted" || Notification.permission !== "denied") {
+                            const trigger = () => {
+                                const entityName = USER_MAP[id] || "New Message";
+                                let body = content;
+
+                                // Add sender name if it's a group or if requested explicit "from username"
+                                if (senderId && senderId !== id) {
+                                    const senderName = USER_MAP[senderId] || "Someone";
+                                    body = `${senderName}: ${content}`;
+                                }
+
+                                new Notification(entityName, { body: body });
+                            };
+
+                            if (Notification.permission === "granted") {
+                                trigger();
+                            } else {
+                                Notification.requestPermission().then(p => {
+                                    if (p === "granted") trigger();
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            // ... move to top logic continues below ...
+
+            // Move to top logic... (keeping existing)
+            const item = document.getElementById(`chat-item-${id}`);
+            if (item) {
+                const list = document.getElementById("usersList");
+                const headers = list.querySelectorAll("div.uppercase");
+
+                if (headers.length >= 2) {
+                    const groupHeader = headers[0];
+                    const userHeader = headers[1];
+                    if (item.compareDocumentPosition(userHeader) & Node.DOCUMENT_POSITION_FOLLOWING) {
+                        groupHeader.after(item);
+                    } else {
+                        userHeader.after(item);
+                    }
+                } else if (headers.length === 1) {
+                    headers[0].after(item);
+                }
+            }
+        }
+
+        document.getElementById("messageInput").addEventListener("input", () => {
+            if (!SELECTED_RECIPIENT_ID || !WS) return;
+
+            WS.send(JSON.stringify({
+                type: "typing",
+                recipient_id: SELECTED_RECIPIENT_ID,
+                is_group: SELECTED_IS_GROUP
+            }));
+        });
+
+        function appendMessage(content, isMe, senderId) {
+            const area = document.getElementById("messagesArea");
+            const bubble = document.createElement("div");
+            bubble.className = `flex w-full mb-4 ${isMe ? 'justify-end' : 'justify-start'}`;
+
+            let nameTag = "";
+            if (!isMe && SELECTED_IS_GROUP && senderId) {
+                const name = USER_MAP[senderId] || "Unknown";
+                nameTag = `<span class="text-xs text-gray-500 mb-1 ml-1 block">${name}</span>`;
+            }
+
+            bubble.innerHTML = `
+                <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[70%]">
+                    ${nameTag}
+                    <div class="p-3 rounded-2xl shadow-sm text-sm ${isMe ? 'bg-blue-500 text-white rounded-br-none' : 'bg-gray-100 text-gray-800 rounded-bl-none'}">
+                        ${content}
+                    </div>
+                </div>
+            `;
+            area.appendChild(bubble);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            const area = document.getElementById("messagesArea");
+            area.scrollTop = area.scrollHeight;
+        }
+
+        document.getElementById("messageForm").addEventListener("submit", (e) => {
+            e.preventDefault();
+            const input = document.getElementById("messageInput");
+            const content = input.value.trim();
+            if (!content || !SELECTED_RECIPIENT_ID) return;
+
+            // Send via WS
+            WS.send(JSON.stringify({
+                recipient_id: SELECTED_RECIPIENT_ID,
+                content: content,
+                is_group: SELECTED_IS_GROUP
+            }));
+
+            // Optimistic UI update
+            appendMessage(content, true, CURRENT_USER_ID);
+            input.value = "";
+        });
+
+
+
+        // Initial Load
+        window.addEventListener('load', () => {
+            checkAuth();
+        });
+
+    </script>
+</body>
+
+</html>
