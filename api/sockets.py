@@ -97,16 +97,30 @@ class ConnectionManager:
         )
         await db.messages.insert_one(msg_model.model_dump(exclude={"id"}))
         
+        payload = {
+            "type": "message",
+            "sender_id": sender_id,
+            "recipient_id": recipient_id, # Include recipient_id for sender to know where it went
+            "content": message,
+            "timestamp": msg_model.timestamp.isoformat(),
+            "is_group": False
+        }
+
         # 2. Send to Recipient (if online)
         if recipient_id in self.active_connections:
             for connection in self.active_connections[recipient_id]:
-                await connection.send_json({
-                    "type": "message",
-                    "sender_id": sender_id,
-                    "content": message,
-                    "timestamp": msg_model.timestamp.isoformat(),
-                    "is_group": False
-                })
+                try:
+                    await connection.send_json(payload)
+                except Exception as e:
+                    print(f"Error sending to recipient {recipient_id}: {e}")
+
+        # 3. Echo to Sender (for multiple devices or just confirmation)
+        if sender_id in self.active_connections:
+            for connection in self.active_connections[sender_id]:
+                try:
+                    await connection.send_json(payload)
+                except Exception as e:
+                    print(f"Error sending to sender {sender_id}: {e}")
 
     async def send_group_message(self, message: str, sender_id: str, group_id: str):
         # 1. Save to DB
@@ -118,24 +132,27 @@ class ConnectionManager:
         )
         await db.messages.insert_one(msg_model.model_dump(exclude={"id"}))
 
+        payload = {
+            "type": "message",
+            "sender_id": sender_id,
+            "group_id": group_id,
+            "content": message,
+            "timestamp": msg_model.timestamp.isoformat(),
+            "is_group": True
+        }
+
         # 2. Get Group Members
         from bson import ObjectId
         group = await db.groups.find_one({"_id": ObjectId(group_id)})
         if group:
             members = group.get("members", [])
             for member_id in members:
-                if member_id == sender_id:
-                     continue # Don't echo back to sender (or do, up to UI)
-                
+                # Send to everyone including sender (to update UI consistently)
                 if member_id in self.active_connections:
                     for connection in self.active_connections[member_id]:
-                        await connection.send_json({
-                            "type": "message",
-                            "sender_id": sender_id,
-                            "group_id": group_id,
-                            "content": message,
-                            "timestamp": msg_model.timestamp.isoformat(),
-                            "is_group": True
-                        })
+                        try:
+                            await connection.send_json(payload)
+                        except Exception as e:
+                            print(f"Error sending group message to {member_id}: {e}")
 
 manager = ConnectionManager()

@@ -358,7 +358,7 @@
     <!-- logic to swap form to register -->
 
     <script>
-        const API_URL = "http://localhost:8000";
+        const API_URL = "http://localhost:8002";
         let TOKEN = localStorage.getItem("access_token");
         let CURRENT_USER_ID = null;
         let SELECTED_RECIPIENT_ID = null;
@@ -485,7 +485,7 @@
 
         function connectWebSocket() {
             if (WS) return;
-            WS = new WebSocket(`ws://localhost:8000/ws?token=${TOKEN}`);
+            WS = new WebSocket(`ws://localhost:8002/ws?token=${TOKEN}`);
 
             WS.onopen = () => console.log("Connected to WS");
 

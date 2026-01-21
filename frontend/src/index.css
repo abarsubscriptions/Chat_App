@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+    --color-glass-bg: rgba(255, 255, 255, 0.9);
+    --color-glass-border: rgba(255, 255, 255, 0.2);
+}
+
+@layer components {
+    .glass-panel {
+        @apply bg-white/90 backdrop-blur-lg border border-white/20 shadow-xl;
+    }
+
+    .message-bubble {
+        @apply max-w-[70%] p-3 rounded-2xl shadow-sm text-sm;
+    }
+
+    .message-me {
+        @apply bg-blue-500 text-white rounded-br-none ml-auto;
+    }
+
+    .message-other {
+        @apply bg-gray-100 text-gray-800 rounded-bl-none;
+    }
+
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+}
