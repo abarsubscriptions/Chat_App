@@ -1,5 +1,4 @@
 from fastapi import FastAPI, HTTPException, Depends, status, WebSocket, WebSocketDisconnect, Query
-from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from typing import Annotated, List
 from datetime import datetime, timedelta
@@ -323,10 +322,6 @@ async def get_group_messages(
     # Store sender names for client convenience?
     # For now, client resolves names from /users list
     return messages
-
-@app.get("/")
-async def read_index():
-    return FileResponse("index.html")
 
 if __name__ == "__main__":
     import uvicorn
