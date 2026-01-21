@@ -12,7 +12,8 @@ export const api = {
         formData.append('password', password);
         const res = await fetch(`${API_BASE}/token`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            mode: 'cors',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Access-Control-Allow-Origin': '*' },
             body: formData
         });
         if (!res.ok) throw new Error('Login failed');
@@ -22,7 +23,8 @@ export const api = {
     async register(name: string, email: string, password: string) {
         const res = await fetch(`${API_BASE}/register`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            mode: 'cors',
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
             body: JSON.stringify({ name, email, password })
         });
         if (!res.ok) {
@@ -33,24 +35,25 @@ export const api = {
     },
 
     async getMe() {
-        const res = await fetch(`${API_BASE}/users/me`, { headers: getAuthHeader() as HeadersInit });
+        const res = await fetch(`${API_BASE}/users/me`, { mode: 'cors', headers: getAuthHeader() as HeadersInit });
         if (!res.ok) throw new Error('Not authenticated');
         return res.json();
     },
 
     async getUsers() {
-        const res = await fetch(`${API_BASE}/users`, { headers: getAuthHeader() as HeadersInit });
+        const res = await fetch(`${API_BASE}/users`, { mode: 'cors', headers: getAuthHeader() as HeadersInit });
         return res.json();
     },
 
     async getGroups() {
-        const res = await fetch(`${API_BASE}/groups`, { headers: getAuthHeader() as HeadersInit });
+        const res = await fetch(`${API_BASE}/groups`, { mode: 'cors', headers: getAuthHeader() as HeadersInit });
         return res.json();
     },
 
     async createGroup(name: string, members: string[], createdBy: string) {
         const res = await fetch(`${API_BASE}/groups`, {
             method: 'POST',
+            mode: 'cors',
             headers: {
                 'Content-Type': 'application/json',
                 ...getAuthHeader()
@@ -63,6 +66,7 @@ export const api = {
     async addGroupMember(groupId: string, userId: string) {
         const res = await fetch(`${API_BASE}/groups/${groupId}/members`, {
             method: 'PUT',
+            mode: 'cors',
             headers: {
                 'Content-Type': 'application/json',
                 ...getAuthHeader()
@@ -75,24 +79,26 @@ export const api = {
     async deleteGroup(groupId: string) {
         const res = await fetch(`${API_BASE}/groups/${groupId}`, {
             method: 'DELETE',
+            mode: 'cors',
             headers: getAuthHeader() as HeadersInit
         });
         if (!res.ok) throw new Error('Failed to delete group');
     },
 
     async getGroupMessages(groupId: string) {
-        const res = await fetch(`${API_BASE}/messages/group/${groupId}`, { headers: getAuthHeader() as HeadersInit });
+        const res = await fetch(`${API_BASE}/messages/group/${groupId}`, { mode: 'cors', headers: getAuthHeader() as HeadersInit });
         return res.json();
     },
 
     async getPrivateMessages(otherUserId: string) {
-        const res = await fetch(`${API_BASE}/messages/${otherUserId}`, { headers: getAuthHeader() as HeadersInit });
+        const res = await fetch(`${API_BASE}/messages/${otherUserId}`, { mode: 'cors', headers: getAuthHeader() as HeadersInit });
         return res.json();
     },
 
     async markRead(id: string) {
         await fetch(`${API_BASE}/conversations/read/${id}`, {
             method: 'POST',
+            mode: 'cors',
             headers: getAuthHeader() as HeadersInit
         });
     }
