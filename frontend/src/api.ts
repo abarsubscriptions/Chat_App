@@ -13,7 +13,7 @@ export const api = {
         const res = await fetch(`${API_BASE}/token`, {
             method: 'POST',
             mode: 'cors',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Access-Control-Allow-Origin': '*' },
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formData
         });
         if (!res.ok) throw new Error('Login failed');
@@ -24,7 +24,7 @@ export const api = {
         const res = await fetch(`${API_BASE}/register`, {
             method: 'POST',
             mode: 'cors',
-            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, email, password })
         });
         if (!res.ok) {
